@@ -1,7 +1,6 @@
 import socket
 import asyncio
 import os
-import sys
 import logging
 
 from typing import Callable
@@ -10,18 +9,6 @@ from typing import Callable
 __version__ = "0.3.2"
 
 logger = logging.getLogger(__name__)
-
-
-# Byte conversion utility for compatibility between
-# Python 2 and 3.
-# http://python3porting.com/problems.html#nicer-solutions
-if sys.version_info < (3,):
-    def _b(x):
-        return x
-else:
-    import codecs
-    def _b(x):
-        return codecs.latin_1_encode(x)[0]
 
 
 class SystemdNotifier:
@@ -49,7 +36,7 @@ class SystemdNotifier:
         self._protocol: asyncio.DatagramProtocol | None = None
         self._regular_notification_task: asyncio.Task | None = None
 
-    def connect(self):
+    async def connect(self):
         try:
             notify_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
             addr = os.getenv('NOTIFY_SOCKET')
@@ -64,7 +51,7 @@ class SystemdNotifier:
             elif self.warn_limit:
                 logger.warning('SystemdNotifier failed to connect', exc_info=True)
 
-    def notify(self, state: bytes):
+    def notify(self, state_str: str):
         """Send a notification to systemd. state is a string; see
         the man page of sd_notify (http://www.freedesktop.org/software/systemd/man/sd_notify.html)
         for a description of the allowable values.
@@ -75,7 +62,7 @@ class SystemdNotifier:
         cause this method to raise any exceptions generated to the caller, to
         aid in debugging."""
         try:
-            self._transport.sendto(_b(state))
+            self._transport.sendto(state_str.encode())
             self._warnings = 0
         except Exception:
             if self.debug:
@@ -91,8 +78,8 @@ class SystemdNotifier:
     def notify_regularly(
             self,
             interval: float | None = None,
-            state_message: bytes | None = None,
-            state_callback: Callable[[], bytes] | None = None
+            state_message: str | None = None,
+            state_callback: Callable[[], str] | None = None
     ):
         if interval is None:
             interval_microseconds = float(os.getenv('WATCHDOG_USEC'))
@@ -105,19 +92,20 @@ class SystemdNotifier:
     async def _notify_regularly(
             self,
             interval: float,
-            state_message: bytes | None,
+            state_message: str | None,
             state_callback: Callable[[], bytes] | None
     ):
         while True:
             if state_callback:
                 state_message = state_callback()
             elif state_message is None:
-                state_message = b''
+                state_message = ''
             self.notify(state_message)
             await asyncio.sleep(interval)
 
     async def __aenter__(self):
-        self.connect()
+        await self.connect()
+        return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if (
