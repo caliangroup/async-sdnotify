@@ -90,7 +90,7 @@ class SystemdNotifier:
             interval_microseconds = float(os.getenv('WATCHDOG_USEC'))
             if interval_microseconds is None:
                 raise EnvironmentError('Unable to determine watchdog interval from ENV, and none was specified')
-            interval = interval_microseconds / 1000
+            interval = interval_microseconds / 1_000_000 / 2  # We try to notify at half the env specified interval
         self._watchdog_task = asyncio.create_task(
             self._watchdog(interval))
 
