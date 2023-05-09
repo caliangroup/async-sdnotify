@@ -42,12 +42,12 @@ async def main():
     
     # Inform systemd that we've finished our startup sequence...
     async with aiosdnotify.SystemdNotifier() as n:
-        n.notify("READY=1")
+        n.ready()
         
         count = 1
         while True:
             print("Running... {}".format(count))
-            n.notify("STATUS=Count is {}".format(count))
+            n.status("Count is {}".format(count))
             count += 1
             await asyncio.sleep(2)
 ```
