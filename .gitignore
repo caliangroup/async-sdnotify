@@ -9,6 +9,7 @@ __pycache__/
 # Distribution / packaging
 MANIFEST
 .Python
+.idea/
 env/
 build/
 develop-eggs/
@@ -24,6 +25,3 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
-
-
-*~
