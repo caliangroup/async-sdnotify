@@ -37,17 +37,17 @@ async def main():
     print("Test starting up...")
     # In a real service, this is where you'd do real startup tasks
     # like opening listening sockets, connecting to a database, etc...
-    await asyncio.sleep(10)
+    await asyncio.sleep(2)
     print("Test startup finished")
     
     # Inform systemd that we've finished our startup sequence...
     async with aiosdnotify.SystemdNotifier() as n:
-        await n.notify("READY=1")
+        n.notify("READY=1")
         
         count = 1
         while True:
             print("Running... {}".format(count))
-            await n.notify("STATUS=Count is {}".format(count))
+            n.notify("STATUS=Count is {}".format(count))
             count += 1
             await asyncio.sleep(2)
 ```
@@ -68,3 +68,6 @@ async def main():
     # Note that we use Type=notify here since test.py will send "READY=1"
     # when it's finished starting up
 	Type=notify
+    
+    [Install]
+    WantedBy=multi-user.target

@@ -1,3 +1,4 @@
+import socket
 import asyncio
 import os
 import sys
@@ -44,23 +45,26 @@ class SystemdNotifier:
         self.debug = debug
         self.warn_limit = warn_limit
         self._warnings = 0
-        self.writer: asyncio.StreamWriter | None = None
+        self._transport: asyncio.DatagramTransport | None = None
+        self._protocol: asyncio.DatagramProtocol | None = None
         self._regular_notification_task: asyncio.Task | None = None
 
-    async def connect(self):
+    def connect(self):
         try:
-            # self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+            notify_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
             addr = os.getenv('NOTIFY_SOCKET')
             if addr[0] == '@':
                 addr = '\0' + addr[1:]
-            _, self.writer = await asyncio.open_connection(addr)
+            notify_socket.connect(addr)
+            self._transport, self._protocol = await asyncio.get_running_loop().create_datagram_endpoint(
+                asyncio.DatagramProtocol, sock=notify_socket)
         except Exception as e:
             if self.debug:
                 raise
             elif self.warn_limit:
-                logger.warn('SystemdNotifier failed to connect', exc_info=True)
+                logger.warning('SystemdNotifier failed to connect', exc_info=True)
 
-    async def notify(self, state: bytes):
+    def notify(self, state: bytes):
         """Send a notification to systemd. state is a string; see
         the man page of sd_notify (http://www.freedesktop.org/software/systemd/man/sd_notify.html)
         for a description of the allowable values.
@@ -71,8 +75,7 @@ class SystemdNotifier:
         cause this method to raise any exceptions generated to the caller, to
         aid in debugging."""
         try:
-            self.writer.write(_b(state))
-            await self.writer.drain()
+            self._transport.sendto(_b(state))
             self._warnings = 0
         except Exception:
             if self.debug:
@@ -81,11 +84,9 @@ class SystemdNotifier:
                 logger.warning('SystemdNotifier failed to notify', exc_info=True)
                 self._warnings += 1
 
-    async def disconnect(self):
-        if self.writer is not None:
-            if not self.writer.is_closing():
-                self.writer.close()
-            await self.writer.wait_closed()
+    def disconnect(self):
+        if self._transport is not None and not self._transport.is_closing():
+            self._transport.close()
 
     def notify_regularly(
             self,
@@ -112,11 +113,11 @@ class SystemdNotifier:
                 state_message = state_callback()
             elif state_message is None:
                 state_message = b''
-            await self.notify(state_message)
+            self.notify(state_message)
             await asyncio.sleep(interval)
 
     async def __aenter__(self):
-        await self.connect()
+        self.connect()
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if (
@@ -129,4 +130,4 @@ class SystemdNotifier:
                 await self._regular_notification_task
             except asyncio.CancelledError:
                 pass
-        await self.disconnect()
+        self.disconnect()
