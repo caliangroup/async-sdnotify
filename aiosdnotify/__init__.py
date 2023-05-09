@@ -32,6 +32,7 @@ class SystemdNotifier:
         """
         self.debug = debug
         self.warn_limit = warn_limit
+        self.watchdog = watchdog
         self._warnings = 0
         self._transport: asyncio.DatagramTransport | None = None
         self._protocol: asyncio.DatagramProtocol | None = None
@@ -84,7 +85,7 @@ class SystemdNotifier:
     def status(self, status: str):
         self._notify(f"STATUS={status}")
 
-    def watchdog(self, interval: float | None = None):
+    def start_watchdog(self, interval: float | None = None):
         if interval is None:
             interval_microseconds = float(os.getenv('WATCHDOG_USEC'))
             if interval_microseconds is None:
@@ -101,6 +102,8 @@ class SystemdNotifier:
 
     async def __aenter__(self):
         await self.connect()
+        if self.watchdog:
+            self.start_watchdog()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
