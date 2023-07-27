@@ -11,6 +11,10 @@ completion, watchdog events, and other service status changes. Thus, this
 package can be used to write system services in Python that play nicely with
 `systemd`. `sdnotify` is compatible with both Python 2 and Python 3.
 
+Just so we're clear, I figured out _why_ nobody made this. Sdnotify uses UDP under the hood.
+There isn't an asyncio implementation of UDP. So I mostly just wound up writing shitty wrappers
+for asyncio around multithreading.
+
 Normally the `SystemdNotifier.notify` method silently ignores exceptions (for example, if the
 systemd notification socket is not available) to allow applications to
 function on non-systemd based systems. However, setting `debug=True` will
