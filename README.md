@@ -1,6 +1,7 @@
 # systemd Service Notification
 
-This is Garrett's Asyncio version of the systemd sd_notify package written by bb4242 (Brett Bethke),
+This is a Calian fork of Garrett's Asyncio version (https://github.com/seatsnob/sdnotify-asyncio)
+of the systemd sd_notify package written by bb4242 (Brett Bethke),
 available at https://github.com/bb4242/sdnotify
 
 This is a pure Python implementation of the
@@ -9,11 +10,7 @@ This is a pure Python implementation of the
 protocol. This protocol can be used to inform `systemd` about service start-up
 completion, watchdog events, and other service status changes. Thus, this
 package can be used to write system services in Python that play nicely with
-`systemd`. `sdnotify` is compatible with both Python 2 and Python 3.
-
-Just so we're clear, I figured out _why_ nobody made this. Sdnotify uses UDP under the hood.
-There isn't an asyncio implementation of UDP. So I mostly just wound up writing shitty wrappers
-for asyncio around multithreading.
+`systemd`. `async-sdnotify` is compatible with Python 3.
 
 Normally the `SystemdNotifier.notify` method silently ignores exceptions (for example, if the
 systemd notification socket is not available) to allow applications to
@@ -23,7 +20,7 @@ aid in debugging.
 
 # Installation
 
-`pip install sdnotify-asyncio`
+`pip install async-sdnotify`
 
 # Example Usage
 

@@ -1,3 +1,11 @@
+#
+# Copyright 2024 Calian Ltd. All rights reserved.
+#
+# Original authors:
+#   - Copyright 2023 Seat Snob (garrett@seatsnob.com)
+#   - Copyright 2016 Brett Bethke (bbethke@gmail.com)
+#
+
 import socket
 import asyncio
 import os
