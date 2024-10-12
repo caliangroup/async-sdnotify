@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "async-sdnotify"
+version = "0.1.0"
+description = "A pure asynchronous Python implementation of systemd's service notification protocol (sd_notify)"
+authors = [
+    "Calian Ltd. <zach.mayoh@calian.com>",
+    "Seat Snob <garrett@seatsnob.com>",
+    "Brett Bethke <bbethke@gmail.com>",
+]
+license = "MIT"
+readme = "README.md"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+packages = [
+    {include = "aiosdnotify"},
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+pytest-asyncio = "^0.24.0"
+pytest-cov = "^5.0.0"
+
+[tool.mypy]
+mypy_path = [
+  "$MYPY_CONFIG_FILE_DIR/aiosdnotify"
+]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
