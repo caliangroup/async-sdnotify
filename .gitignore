@@ -25,3 +25,7 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Python
+.coverage
+coverage.xml
