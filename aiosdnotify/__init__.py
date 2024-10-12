@@ -10,9 +10,11 @@ import socket
 import asyncio
 import os
 import logging
+from types import TracebackType
+from typing import Any, Optional, Self, Type
 
 
-__version__ = "1.0.0"
+__version__ = "0.1.0"
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ class SystemdNotifier:
     """This class holds a connection to the systemd notification socket
     and can be used to send messages to systemd using its notify method."""
 
-    def __init__(self, debug=False, warn_limit=3, watchdog=True):
+    def __init__(self, debug: bool=False, warn_limit: int=3, watchdog: bool=True) -> None:
         """Instantiate a new notifier object. This will initiate a connection
         to the systemd notification socket.
 
@@ -44,29 +46,31 @@ class SystemdNotifier:
         self._warnings = 0
         self._transport: asyncio.DatagramTransport | None = None
         self._protocol: asyncio.DatagramProtocol | None = None
-        self._watchdog_task: asyncio.Task | None = None
+        self._watchdog_task: asyncio.Task[None] | None = None
         self._ready_event = asyncio.Event()
 
-    async def connect(self):
+    async def connect(self) -> None:
         try:
-            notify_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
             addr = os.getenv('NOTIFY_SOCKET')
+            if addr is None:
+                raise EnvironmentError('NOTIFY_SOCKET not set')
+            notify_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
             if addr[0] == '@':
                 addr = '\0' + addr[1:]
             notify_socket.connect(addr)
             self._transport, self._protocol = await asyncio.get_running_loop().create_datagram_endpoint(
                 asyncio.DatagramProtocol, sock=notify_socket)
-        except Exception as e:
+        except Exception:
             if self.debug:
                 raise
             elif self.warn_limit:
                 logger.warning('SystemdNotifier failed to connect', exc_info=True)
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         if self._transport is not None and not self._transport.is_closing():
             self._transport.close()
 
-    def _notify(self, state_str: str):
+    def _notify(self, state_str: str) -> None:
         """Send a notification to systemd. state is a string; see
         the man page of sd_notify (http://www.freedesktop.org/software/systemd/man/sd_notify.html)
         for a description of the allowable values.
@@ -77,6 +81,8 @@ class SystemdNotifier:
         cause this method to raise any exceptions generated to the caller, to
         aid in debugging."""
         try:
+            if self._transport is None:
+                raise RuntimeError('SystemdNotifier is not connected')
             self._transport.sendto(state_str.encode())
             self._warnings = 0
         except Exception:
@@ -86,35 +92,40 @@ class SystemdNotifier:
                 logger.warning('SystemdNotifier failed to notify', exc_info=True)
                 self._warnings += 1
 
-    def ready(self):
+    def ready(self) -> None:
         self._notify("READY=1")
         self._ready_event.set()
 
-    def status(self, status: str):
+    def status(self, status: str) -> None:
         self._notify(f"STATUS={status}")
 
-    def start_watchdog(self, interval: float | None = None):
+    def start_watchdog(self, interval: float | None = None) -> None:
         if interval is None:
-            interval_microseconds = float(os.getenv('WATCHDOG_USEC'))
+            interval_microseconds = os.getenv('WATCHDOG_USEC')
             if interval_microseconds is None:
-                raise EnvironmentError('Unable to determine watchdog interval from ENV, and none was specified')
-            interval = interval_microseconds / 1_000_000 / 2  # We try to notify at half the env specified interval
+                message = 'Unable to determine watchdog interval from ENV, and none was specified'
+                if self.debug:
+                    raise EnvironmentError(message)
+                else:
+                    logger.warning(message)
+                    return
+            interval = float(interval_microseconds) / 1_000_000 / 2  # We try to notify at half the env specified interval
         self._watchdog_task = asyncio.create_task(
             self._watchdog(interval))
 
-    async def _watchdog(self, interval: float):
+    async def _watchdog(self, interval: float) -> None:
         await self._ready_event.wait()
         while True:
             self._notify('WATCHDOG=1')
             await asyncio.sleep(interval)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         await self.connect()
         if self.watchdog:
             self.start_watchdog()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
         if (
                 self._watchdog_task
                 and not self._watchdog_task.done()
