@@ -11,7 +11,7 @@ import asyncio
 import os
 import logging
 from types import TracebackType
-from typing import Any, Optional, Self, Type
+from typing import Self, Type
 
 
 __version__ = "0.1.0.post1"
