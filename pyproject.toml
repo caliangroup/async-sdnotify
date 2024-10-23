@@ -1,12 +1,14 @@
 [tool.poetry]
 name = "async-sdnotify"
-version = "0.1.0"
+version = "0.1.0.post1"
 description = "A pure asynchronous Python implementation of systemd's service notification protocol (sd_notify)"
 authors = [
     "Calian Ltd. <zach.mayoh@calian.com>",
     "Seat Snob <garrett@seatsnob.com>",
     "Brett Bethke <bbethke@gmail.com>",
 ]
+homepage = "https://calian.com/"
+repository = "https://github.com/caliangroup/async-sdnotify"
 license = "MIT"
 readme = "README.md"
 classifiers = [
